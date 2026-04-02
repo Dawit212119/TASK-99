@@ -19,14 +19,15 @@ cd /path/to/TASK-99
 ### 2. Start all services
 
 ```bash
-docker compose up --build
+cd repo && docker compose up --build
 ```
 
 This command:
 1. Builds the application image (installs npm deps, generates Prisma client, compiles TypeScript).
 2. Starts PostgreSQL (`db` service) and waits for its health check to pass.
 3. Runs `prisma migrate deploy` to apply all migrations.
-4. Starts the Express server on port **3000**.
+4. Seeds default data (`default-org` + `admin`) automatically (idempotent).
+5. Starts the Express server on port **3000**.
 
 > First build takes ~2–3 minutes. Subsequent starts are much faster.
 
@@ -39,6 +40,14 @@ This command:
 ```bash
 curl http://localhost:3000/api/v1/health
 ```
+
+### Login right away (auto-seeded)
+
+Default credential available immediately after startup:
+
+- `organizationSlug`: `default-org`
+- `username`: `admin`
+- `password`: `admin-password-secure`
 
 Expected response (`200 OK`):
 
@@ -56,7 +65,7 @@ Expected response (`200 OK`):
 ### Confirm containers are running
 
 ```bash
-docker compose ps
+cd repo && docker compose ps
 ```
 
 You should see both `app` and `db` with status `running`.
@@ -64,7 +73,7 @@ You should see both `app` and `db` with status `running`.
 ### View application logs
 
 ```bash
-docker compose logs -f app
+cd repo && docker compose logs -f app
 ```
 
 ---
@@ -72,51 +81,13 @@ docker compose logs -f app
 ## Stopping the Service
 
 ```bash
-docker compose down
+cd repo && docker compose down
 ```
 
 To also remove the database volume (destroys all data):
 
 ```bash
-docker compose down -v
-```
-
----
-
-## Development (without Docker)
-
-### 1. Install dependencies
-
-```bash
-npm install
-```
-
-### 2. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env — set DATABASE_URL to a local PostgreSQL instance
-```
-
-### 3. Apply migrations and generate Prisma client
-
-```bash
-npm run prisma:migrate
-npm run prisma:generate
-```
-
-### 4. Seed the database (optional)
-
-```bash
-npm run seed
-```
-
-Creates a `default-org` organization and an `admin` user (`admin-password-secure`).
-
-### 5. Start in dev mode (with hot reload)
-
-```bash
-npm run dev
+cd repo && docker compose down -v
 ```
 
 ---
@@ -126,14 +97,14 @@ npm run dev
 ### One-click (unit + API — recommended)
 
 ```bash
-bash run_tests.sh
+bash repo/run_tests.sh
 ```
 
 This script:
 1. Runs all unit tests (`npm run test:unit`).
 2. Starts the test containers (`docker-compose.test.yml`) with an isolated in-memory database.
 3. Waits for the health check to pass.
-4. Runs all API tests against `http://localhost:3011` (override with `TEST_HOST_PORT` / `TEST_BASE_URL`).
+4. Runs all API tests against `http://localhost:3011`.
 5. Tears down the test containers.
 6. Prints a final pass/fail summary.
 
@@ -171,13 +142,13 @@ Expected output (all passing):
 ### Unit tests only (no database required)
 
 ```bash
-npm run test:unit
+cd repo && npm run test:unit
 ```
 
 Or via the script:
 
 ```bash
-bash run_tests.sh --unit
+bash repo/run_tests.sh --unit
 ```
 
 Tests cover:
@@ -197,19 +168,19 @@ Tests cover:
 Start the test stack first:
 
 ```bash
-docker compose -f docker-compose.test.yml up --build
+cd repo && docker compose -f docker-compose.test.yml up --build
 ```
 
 Then in a separate terminal:
 
 ```bash
-TEST_BASE_URL=http://localhost:3011 npm run test:api
+cd repo && TEST_BASE_URL=http://localhost:3011 npm run test:api
 ```
 
 Or via the script (skips `docker compose up` if app is already reachable):
 
 ```bash
-bash run_tests.sh --api
+bash repo/run_tests.sh --api
 ```
 
 API tests cover:
@@ -223,7 +194,7 @@ API tests cover:
 ### Tear down test containers
 
 ```bash
-docker compose -f docker-compose.test.yml down --volumes
+cd repo && docker compose -f docker-compose.test.yml down --volumes
 ```
 
 ---
@@ -232,63 +203,30 @@ docker compose -f docker-compose.test.yml down --volumes
 
 ```
 .
-├── src/
-│   ├── app.ts                  # Express app factory
-│   ├── server.ts               # Entry point, DB connect, graceful shutdown
-│   ├── config/                 # Runtime config from env vars
-│   ├── lib/                    # Prisma client, logger
-│   ├── middleware/             # Auth, correlation ID, error handler, rate limiter, tenant scope
-│   ├── routes/                 # Route definitions per domain
-│   ├── controllers/            # Request handlers
-│   ├── services/               # Business logic (forum, auth, notifications, audit, risk)
-│   └── types/                  # Shared TypeScript types
-├── prisma/
-│   ├── schema.prisma           # Data model
-│   └── migrations/             # SQL migration files
-├── config/                     # Static configuration defaults
-├── scripts/
-│   ├── entrypoint.sh           # Docker entrypoint (migrate + start)
-│   ├── entrypoint.test.sh      # Test container entrypoint (migrate + seed + start)
-│   ├── seed.ts                 # Production database seeder
-│   ├── seed-test.ts            # Test database seeder (fixed IDs)
-│   └── backup.sh               # Nightly backup script
-├── unit_tests/                 # Jest unit tests (no DB)
-│   ├── auth.lockout.test.ts
-│   ├── reply.depth.test.ts
-│   ├── thread.state.test.ts
-│   ├── pin.limit.test.ts
-│   ├── mute.ban.test.ts
-│   ├── venue.booking.test.ts
-│   ├── notification.retry.test.ts
-│   ├── risk.rules.test.ts
-│   ├── feature.flags.test.ts
-│   ├── input.validation.test.ts
-│   └── tenant.isolation.test.ts
-├── API_tests/                  # Jest API integration tests (requires server)
-│   ├── helpers/
-│   │   ├── client.ts           # HTTP client + loginAs helper
-│   │   └── fixtures.ts         # Test org, credentials, fixed IDs
-│   ├── auth.test.ts
-│   ├── threads.test.ts
-│   ├── replies.test.ts
-│   ├── moderation.test.ts
-│   ├── sections.test.ts
-│   ├── permissions.test.ts
-│   └── health.test.ts
-├── run_tests.sh                # One-click test runner
-├── docs/                       # Design and specification documents
-├── Dockerfile
-├── docker-compose.yml
-├── .env.example
-├── package.json
-└── tsconfig.json
+├── docs/
+│   ├── api-spec.md
+│   ├── design.md
+│   ├── prompt.md
+│   └── questions.md
+└── repo/
+    ├── src/                      # Express app code
+    ├── prisma/                   # Prisma schema + migrations
+    ├── config/                   # Runtime defaults
+    ├── scripts/                  # Docker entrypoints + seed + backup
+    ├── unit_tests/              # Jest unit tests (no DB)
+    ├── API_tests/               # Jest API integration tests (requires server)
+    ├── run_tests.sh             # One-click test runner
+    ├── Dockerfile
+    ├── docker-compose.yml
+    ├── package.json
+    └── tsconfig.json
 ```
 
 ---
 
 ## API Overview
 
-Base path: `POST /api/v1`
+Base path: `/api/v1`
 
 | Domain | Endpoints |
 |--------|-----------|
@@ -325,7 +263,7 @@ See [`docs/api-spec.md`](docs/api-spec.md) for the full specification.
 | `RATE_LIMIT_READ_PER_MIN` | `600` | Read actions per user per minute |
 | `LOG_LEVEL` | `info` | Winston log level |
 | `BACKUP_VOLUME_PATH` | `/backups` | Path for nightly backups |
-| `INTERNAL_API_KEY` | — | Protects internal dispatch/retry endpoints; leave blank to disable |
+| `INTERNAL_API_KEY` | — | Required in production (>= 32 chars) for internal dispatch/retry endpoints |
 
 ---
 

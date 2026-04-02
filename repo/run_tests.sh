@@ -22,9 +22,8 @@ RESET='\033[0m'
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 COMPOSE_FILE="docker-compose.test.yml"
-# Host port for app-test (avoid clashing with unrelated services on 3001)
-export TEST_HOST_PORT="${TEST_HOST_PORT:-3011}"
-TEST_BASE_URL="${TEST_BASE_URL:-http://localhost:${TEST_HOST_PORT}}"
+# Test stack publishes app on fixed host port 3011.
+TEST_BASE_URL="${TEST_BASE_URL:-http://localhost:3011}"
 HEALTH_URL="${TEST_BASE_URL}/api/v1/health"
 HEALTH_TIMEOUT=120   # seconds to wait for the app to become healthy
 HEALTH_INTERVAL=3    # seconds between health checks
@@ -145,7 +144,7 @@ if $RUN_API; then
     fi
     section "Starting test containers ($COMPOSE_FILE)"
     if ! docker compose -f "$COMPOSE_FILE" up --build --detach; then
-      fail "docker compose up failed — is host port ${TEST_HOST_PORT} already in use? Stop the other service or set TEST_HOST_PORT to a free port."
+      fail "docker compose up failed — is host port 3011 already in use? Stop the other service that uses it."
       API_EXIT=1
       exit 1
     fi
