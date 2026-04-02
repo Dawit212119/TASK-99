@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate } from "../middleware/auth";
+import { authenticate, requireRole } from "../middleware/auth";
 import { tenantScope } from "../middleware/tenantScope";
 import { readRateLimiter, writeRateLimiter } from "../middleware/rateLimiter";
 import {
@@ -13,11 +13,13 @@ import {
 const router = Router();
 router.use(authenticate, tenantScope);
 
+const modOrAdmin = requireRole("MODERATOR", "ADMINISTRATOR");
+
 router.get("/sections", readRateLimiter, handleListSections);
-router.post("/sections", writeRateLimiter, handleCreateSection);
-router.patch("/sections/:sectionId", writeRateLimiter, handleUpdateSection);
+router.post("/sections", writeRateLimiter, modOrAdmin, handleCreateSection);
+router.patch("/sections/:sectionId", writeRateLimiter, modOrAdmin, handleUpdateSection);
 
 router.get("/sections/:sectionId/subsections", readRateLimiter, handleListSubsections);
-router.post("/sections/:sectionId/subsections", writeRateLimiter, handleCreateSubsection);
+router.post("/sections/:sectionId/subsections", writeRateLimiter, modOrAdmin, handleCreateSubsection);
 
 export default router;

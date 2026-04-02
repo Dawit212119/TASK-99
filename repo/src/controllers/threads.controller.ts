@@ -7,6 +7,8 @@ import {
 } from "../schemas/thread.schema";
 import * as forumService from "../services/forum.service";
 import { buildPaginatedResponse } from "../lib/response";
+import { AppError } from "../middleware/errorHandler";
+import { ErrorCode } from "../types";
 
 export async function handleCreate(
   req: Request,
@@ -14,10 +16,21 @@ export async function handleCreate(
   next: NextFunction
 ): Promise<void> {
   try {
+    const user = req.user!;
+
+    // Muted users cannot create threads
+    if (user.muteUntil && user.muteUntil > new Date()) {
+      throw new AppError(
+        403,
+        ErrorCode.USER_MUTED,
+        `You are muted until ${user.muteUntil.toISOString()}`
+      );
+    }
+
     const input = createThreadSchema.parse(req.body);
     const thread = await forumService.createThread(
-      req.user!.organizationId,
-      req.user!.id,
+      user.organizationId,
+      user.id,
       input
     );
     res.status(201).json(thread);
@@ -71,6 +84,7 @@ export async function handleUpdate(
       req.params.threadId,
       req.user!.organizationId,
       req.user!.id,
+      req.user!.role,
       input
     );
     res.json(thread);
@@ -141,7 +155,8 @@ export async function handleDelete(
     await forumService.deleteThread(
       req.params.threadId,
       req.user!.organizationId,
-      req.user!.id
+      req.user!.id,
+      req.user!.role
     );
     res.status(204).send();
   } catch (err) {

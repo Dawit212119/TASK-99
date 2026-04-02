@@ -110,9 +110,19 @@ export async function updateThread(
   threadId: string,
   organizationId: string,
   actorId: string,
+  actorRole: string,
   input: UpdateThreadInput
 ): Promise<Thread> {
   const thread = await getThread(threadId, organizationId);
+
+  // Object-level authorization: only the author, moderators, or admins may edit
+  if (
+    thread.authorId !== actorId &&
+    actorRole !== "MODERATOR" &&
+    actorRole !== "ADMINISTRATOR"
+  ) {
+    throw new AppError(403, ErrorCode.FORBIDDEN, "You can only edit your own threads");
+  }
 
   if (thread.state === ThreadState.ARCHIVED) {
     throw new AppError(
@@ -222,9 +232,20 @@ export async function unpinThread(
 export async function deleteThread(
   threadId: string,
   organizationId: string,
-  actorId: string
+  actorId: string,
+  actorRole: string
 ): Promise<void> {
   const thread = await getThread(threadId, organizationId);
+
+  // Object-level authorization: only the author, moderators, or admins may delete
+  if (
+    thread.authorId !== actorId &&
+    actorRole !== "MODERATOR" &&
+    actorRole !== "ADMINISTRATOR"
+  ) {
+    throw new AppError(403, ErrorCode.FORBIDDEN, "You can only delete your own threads");
+  }
+
   const now = new Date();
   const expiresAt = new Date(
     now.getTime() + config.forum.recycleBinRetentionDays * 86_400_000
@@ -342,11 +363,21 @@ export async function updateReply(
   replyId: string,
   organizationId: string,
   actorId: string,
+  actorRole: string,
   input: UpdateReplyInput
 ): Promise<ReplyWithAuthor> {
   const reply = await replyRepository.findById(replyId, organizationId);
   if (!reply) {
     throw new AppError(404, ErrorCode.NOT_FOUND, "Reply not found");
+  }
+
+  // Object-level authorization: only the author, moderators, or admins may edit
+  if (
+    reply.authorId !== actorId &&
+    actorRole !== "MODERATOR" &&
+    actorRole !== "ADMINISTRATOR"
+  ) {
+    throw new AppError(403, ErrorCode.FORBIDDEN, "You can only edit your own replies");
   }
 
   // thread.organizationId already enforced by findById scoping
@@ -378,11 +409,21 @@ export async function updateReply(
 export async function deleteReply(
   replyId: string,
   organizationId: string,
-  actorId: string
+  actorId: string,
+  actorRole: string
 ): Promise<void> {
   const reply = await replyRepository.findById(replyId, organizationId);
   if (!reply) {
     throw new AppError(404, ErrorCode.NOT_FOUND, "Reply not found");
+  }
+
+  // Object-level authorization: only the author, moderators, or admins may delete
+  if (
+    reply.authorId !== actorId &&
+    actorRole !== "MODERATOR" &&
+    actorRole !== "ADMINISTRATOR"
+  ) {
+    throw new AppError(403, ErrorCode.FORBIDDEN, "You can only delete your own replies");
   }
 
   const now = new Date();

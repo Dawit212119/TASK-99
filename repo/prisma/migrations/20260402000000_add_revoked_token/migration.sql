@@ -1,15 +1,11 @@
 -- CreateTable
-CREATE TABLE "RevokedToken" (
-    "id" TEXT NOT NULL,
-    "jti" TEXT NOT NULL,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "revokedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE `RevokedToken` (
+    `id` VARCHAR(191) NOT NULL,
+    `jti` VARCHAR(191) NOT NULL,
+    `expiresAt` DATETIME(3) NOT NULL,
+    `revokedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    CONSTRAINT "RevokedToken_pkey" PRIMARY KEY ("id")
-);
-
--- CreateIndex
-CREATE UNIQUE INDEX "RevokedToken_jti_key" ON "RevokedToken"("jti");
-
--- CreateIndex
-CREATE INDEX "RevokedToken_expiresAt_idx" ON "RevokedToken"("expiresAt");
+    UNIQUE INDEX `RevokedToken_jti_key`(`jti`),
+    INDEX `RevokedToken_expiresAt_idx`(`expiresAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

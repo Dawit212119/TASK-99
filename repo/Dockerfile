@@ -2,9 +2,9 @@ FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-# OpenSSL + CA for Prisma engines download; wget for compose healthcheck
+# OpenSSL + CA for Prisma engines download; wget for compose healthcheck; default-mysql-client for backup
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends openssl ca-certificates wget \
+  && apt-get install -y --no-install-recommends openssl ca-certificates wget default-mysql-client \
   && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (cache layer)

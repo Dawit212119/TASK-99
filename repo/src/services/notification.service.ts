@@ -211,8 +211,8 @@ export async function retryFailedNotifications(): Promise<number> {
 
     try {
       if (newCount >= config.notifications.maxRetries) {
-        // Final attempt exhausted — mark delivered (best-effort in-app)
-        await notificationRepository.markDelivered(n.id, now);
+        // Final attempt exhausted — mark as permanently failed
+        await notificationRepository.markFailed(n.id, newCount, null);
       } else {
         await notificationRepository.scheduleRetry(n.id, newCount, nextRetryAt);
       }

@@ -60,6 +60,7 @@ export async function handleUpdate(
       req.params.replyId,
       req.user!.organizationId,
       req.user!.id,
+      req.user!.role,
       input
     );
     res.json(reply);
@@ -77,7 +78,8 @@ export async function handleDelete(
     await forumService.deleteReply(
       req.params.replyId,
       req.user!.organizationId,
-      req.user!.id
+      req.user!.id,
+      req.user!.role
     );
     res.status(204).send();
   } catch (err) {

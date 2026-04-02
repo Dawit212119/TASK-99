@@ -1,4 +1,4 @@
-import { User, Role } from "@prisma/client";
+import { User, Role, Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 export interface CreateUserInput {
@@ -14,6 +14,14 @@ export interface LoginAttemptInput {
   orgSlug: string;
   success: boolean;
   ipAddress?: string;
+}
+
+export interface UpdateUserInput {
+  isBanned?: boolean;
+  muteUntil?: Date | null;
+  role?: Role;
+  passwordHash?: string;
+  tokenVersion?: number | { increment: number };
 }
 
 export const userRepository = {
@@ -38,11 +46,24 @@ export const userRepository = {
     return prisma.user.create({ data });
   },
 
-  update(
-    id: string,
-    data: Partial<Pick<User, "isBanned" | "muteUntil" | "role" | "passwordHash">>
-  ): Promise<User> {
-    return prisma.user.update({ where: { id }, data });
+  update(id: string, data: UpdateUserInput): Promise<User> {
+    // Transform the tokenVersion increment syntax for Prisma
+    const prismaData: Prisma.UserUpdateInput = {};
+
+    if (data.isBanned !== undefined) prismaData.isBanned = data.isBanned;
+    if (data.muteUntil !== undefined) prismaData.muteUntil = data.muteUntil;
+    if (data.role !== undefined) prismaData.role = data.role;
+    if (data.passwordHash !== undefined) prismaData.passwordHash = data.passwordHash;
+
+    if (data.tokenVersion !== undefined) {
+      if (typeof data.tokenVersion === "object" && "increment" in data.tokenVersion) {
+        prismaData.tokenVersion = { increment: data.tokenVersion.increment };
+      } else {
+        prismaData.tokenVersion = data.tokenVersion;
+      }
+    }
+
+    return prisma.user.update({ where: { id }, data: prismaData });
   },
 
   countRecentFailedAttempts(

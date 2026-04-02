@@ -97,14 +97,14 @@ Returns user profile, role, and moderation status (`isBanned`, `muteUntil`).
 ### 4.2 Subsections
 
 - `GET /sections/{sectionId}/subsections`
-- `POST /sections/{sectionId}/subsections`
+- `POST /sections/{sectionId}/subsections` (admin/moderator)
 
 ### 4.3 Tags (Flat Taxonomy)
 
 - `GET /tags`
-- `POST /tags`
-- `PATCH /tags/{tagId}`
-- `DELETE /tags/{tagId}`
+- `POST /tags` (admin/moderator)
+- `PATCH /tags/{tagId}` (admin/moderator)
+- `DELETE /tags/{tagId}` (admin/moderator)
 
 Constraints:
 - Unique `slug` per organization

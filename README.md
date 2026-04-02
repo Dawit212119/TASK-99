@@ -1,6 +1,6 @@
 # CivicForum Operations Platform
 
-Offline-first, multi-tenant civic forum backend — Express + TypeScript + Prisma + PostgreSQL.
+Offline-first, multi-tenant civic forum backend — Express + TypeScript + Prisma + MySQL.
 
 ---
 
@@ -24,7 +24,7 @@ cd repo && docker compose up --build
 
 This command:
 1. Builds the application image (installs npm deps, generates Prisma client, compiles TypeScript).
-2. Starts PostgreSQL (`db` service) and waits for its health check to pass.
+2. Starts MySQL (`db` service) and waits for its health check to pass.
 3. Runs `prisma migrate deploy` to apply all migrations.
 4. Seeds default data (`default-org` + `admin`) automatically (idempotent).
 5. Starts the Express server on port **3000**.
@@ -254,7 +254,7 @@ See [`docs/api-spec.md`](docs/api-spec.md) for the full specification.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3000` | HTTP listen port |
-| `DATABASE_URL` | — | PostgreSQL connection string |
+| `DATABASE_URL` | — | MySQL connection string |
 | `JWT_SECRET` | — | Token signing secret (min 32 chars in production) |
 | `JWT_EXPIRES_IN` | `8h` | Token TTL |
 | `LOGIN_LOCKOUT_ATTEMPTS` | `5` | Failed logins before lockout |
@@ -278,19 +278,9 @@ See [`docs/api-spec.md`](docs/api-spec.md) for the full specification.
 
 ---
 
-## Database Engine Note
+## Database Engine
 
-The original prompt specified MySQL. This implementation uses **PostgreSQL 16** for the following reasons:
-
-- **Better JSON operator support** — Prisma's `Json` fields and `$queryRaw` aggregations with `DATE_TRUNC` require PostgreSQL-style operators that are more ergonomic than MySQL's JSON functions.
-- **Native array types** — PostgreSQL's native array support simplifies future tag/permission queries.
-- **Superior LISTEN/NOTIFY** — PostgreSQL's publish-subscribe mechanism provides a foundation for real-time notification delivery without an external message broker.
-
-The offline-first, single-host deployment target is equally satisfied by PostgreSQL.
-
-**Point-in-time recovery (PITR)** is provided via WAL archiving and `pg_basebackup` — the PostgreSQL equivalent of MySQL binlog-based PITR. The backup script at `scripts/backup.sh` uses `pg_dump` for nightly snapshots with 14-day retention, consistent with the prompt requirement. To enable true PITR, configure `archive_mode = on` and `archive_command` in `postgresql.conf` to ship WAL segments to a durable store (S3, GCS, etc.).
-
-No MySQL-specific features are required by the prompt that are unavailable in PostgreSQL.
+This implementation uses **MySQL 8.0** as specified in the prompt. The backup script at `scripts/backup.sh` uses `mysqldump` for nightly snapshots with 14-day retention. **Point-in-time recovery (PITR)** is supported via MySQL's binary log (`binlog`). To enable PITR, configure `log_bin`, `binlog_format=ROW`, and set an appropriate `binlog_expire_logs_seconds` in the MySQL server configuration. For managed services (AWS RDS, GCP Cloud SQL, Azure Database for MySQL), enable the provider's automated PITR feature.
 
 ---
 

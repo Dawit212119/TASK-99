@@ -9,6 +9,7 @@ export interface CreateSectionInput {
 
 export interface CreateSubsectionInput {
   sectionId: string;
+  organizationId: string;
   name: string;
 }
 

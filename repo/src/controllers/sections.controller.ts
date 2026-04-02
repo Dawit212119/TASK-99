@@ -63,7 +63,8 @@ export async function handleListSubsections(
 ): Promise<void> {
   try {
     const subsections = await sectionService.listSubsections(
-      req.params.sectionId
+      req.params.sectionId,
+      req.user!.organizationId
     );
     res.json({ data: subsections });
   } catch (err) {

@@ -7,13 +7,15 @@ import { AppError } from "./errorHandler";
 import { ErrorCode, AuthenticatedUser } from "../types";
 import { prisma } from "../lib/prisma";
 
+/**
+ * JWT payload — used ONLY for identity resolution.
+ * Role, ban status, mute status are NEVER trusted from the token;
+ * they are always fetched from the database on every request.
+ */
 interface TokenPayload {
   sub: string;
   organizationId: string;
-  username: string;
-  role: Role;
-  isBanned: boolean;
-  muteUntil: string | null;
+  tokenVersion: number;
   jti?: string;
 }
 
@@ -40,6 +42,7 @@ export async function authenticate(
       );
     }
 
+    // Check token revocation (logout)
     if (payload.jti) {
       const revoked = await prisma.revokedToken.findUnique({
         where: { jti: payload.jti },
@@ -51,13 +54,52 @@ export async function authenticate(
       }
     }
 
+    // Fetch FRESH user state from DB on every request
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        organizationId: true,
+        username: true,
+        role: true,
+        isBanned: true,
+        muteUntil: true,
+        tokenVersion: true,
+      },
+    });
+
+    if (!user) {
+      return next(
+        new AppError(401, ErrorCode.UNAUTHORIZED, "User no longer exists")
+      );
+    }
+
+    // Verify tokenVersion matches — moderation/role changes bump this
+    if (user.tokenVersion !== payload.tokenVersion) {
+      return next(
+        new AppError(
+          401,
+          ErrorCode.TOKEN_REVOKED,
+          "Token invalidated by account state change"
+        )
+      );
+    }
+
+    // Enforce ban at the middleware level — banned users cannot use ANY endpoint
+    if (user.isBanned) {
+      return next(
+        new AppError(403, ErrorCode.USER_BANNED, "Account is banned")
+      );
+    }
+
+    // Populate req.user from DB — NOT from token claims
     req.user = {
-      id: payload.sub,
-      organizationId: payload.organizationId,
-      username: payload.username,
-      role: payload.role,
-      isBanned: payload.isBanned,
-      muteUntil: payload.muteUntil ? new Date(payload.muteUntil) : null,
+      id: user.id,
+      organizationId: user.organizationId,
+      username: user.username,
+      role: user.role,
+      isBanned: user.isBanned,
+      muteUntil: user.muteUntil,
     };
     next();
   } catch (err) {
@@ -81,14 +123,11 @@ export function requireRole(...roles: string[]) {
   };
 }
 
-export function signToken(user: AuthenticatedUser): string {
+export function signToken(user: { id: string; organizationId: string; tokenVersion?: number }): string {
   const payload: TokenPayload = {
     sub: user.id,
     organizationId: user.organizationId,
-    username: user.username,
-    role: user.role,
-    isBanned: user.isBanned,
-    muteUntil: user.muteUntil?.toISOString() ?? null,
+    tokenVersion: user.tokenVersion ?? 0,
     jti: uuidv4(),
   };
   return jwt.sign(payload, config.auth.jwtSecret, {

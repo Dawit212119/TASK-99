@@ -57,7 +57,15 @@ export async function updateSection(
   return updated;
 }
 
-export async function listSubsections(sectionId: string): Promise<Subsection[]> {
+export async function listSubsections(
+  sectionId: string,
+  organizationId: string
+): Promise<Subsection[]> {
+  // Verify section belongs to the requesting organization
+  const section = await sectionRepository.findById(sectionId, organizationId);
+  if (!section) {
+    throw new AppError(404, ErrorCode.NOT_FOUND, "Section not found");
+  }
   return sectionRepository.findSubsections(sectionId);
 }
 
@@ -74,6 +82,7 @@ export async function createSubsection(
 
   const subsection = await sectionRepository.createSubsection({
     sectionId,
+    organizationId,
     name: input.name,
   });
 

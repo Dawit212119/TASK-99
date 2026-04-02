@@ -46,7 +46,7 @@ router.delete("/admin/carousel-items/:itemId", writeRateLimiter, adminOnly, hand
 // Venues — all authenticated users can read; writes require admin
 router.get("/admin/venues", readRateLimiter, handleListVenues);
 router.post("/admin/venues", writeRateLimiter, adminOnly, handleCreateVenue);
-router.post("/admin/venues/:venueId/bookings", writeRateLimiter, handleCreateBooking);
-router.patch("/admin/venue-bookings/:bookingId", writeRateLimiter, handleUpdateBooking);
+router.post("/admin/venues/:venueId/bookings", writeRateLimiter, adminOnly, handleCreateBooking);
+router.patch("/admin/venue-bookings/:bookingId", writeRateLimiter, adminOnly, handleUpdateBooking);
 
 export default router;

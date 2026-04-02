@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -52,6 +52,7 @@ model Organization {
 
   users                  User[]
   sections               Section[]
+  subsections            Subsection[]
   tags                   Tag[]
   threads                Thread[]
   announcements          Announcement[]
@@ -74,6 +75,7 @@ model User {
   role           Role      @default(USER)
   isBanned       Boolean   @default(false)
   muteUntil      DateTime?
+  tokenVersion   Int       @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -120,14 +122,19 @@ model Section {
 }
 
 model Subsection {
-  id        String   @id @default(cuid())
-  sectionId String
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  sectionId      String
+  organizationId String
+  name           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  section Section  @relation(fields: [sectionId], references: [id])
-  threads Thread[]
+  section      Section      @relation(fields: [sectionId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  threads      Thread[]
+
+  @@index([organizationId])
+  @@index([sectionId])
 }
 
 model Tag {
@@ -155,7 +162,7 @@ model Thread {
   subsectionId   String?
   authorId       String
   title          String
-  body           String
+  body           String      @db.Text
   state          ThreadState @default(ACTIVE)
   isPinned       Boolean     @default(false)
   isFeatured     Boolean     @default(false)
@@ -182,7 +189,7 @@ model Reply {
   authorId       String
   parentReplyId  String?
   depth          Int       @default(1)
-  body           String
+  body           String    @db.Text
   deletedAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -229,7 +236,7 @@ model Announcement {
   id             String    @id @default(cuid())
   organizationId String
   title          String
-  body           String
+  body           String    @db.Text
   order          Int       @default(0)
   startAt        DateTime?
   endAt          DateTime?
@@ -298,7 +305,7 @@ model Notification {
   userId         String
   category       String
   title          String
-  body           String
+  body           String             @db.Text
   status         NotificationStatus @default(PENDING)
   retryCount     Int                @default(0)
   scheduledAt    DateTime

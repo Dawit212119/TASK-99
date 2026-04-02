@@ -86,7 +86,14 @@ export async function login(
     muteUntil: user!.muteUntil,
   };
 
-  return { user: principal, token: signToken(principal) };
+  // Sign token with tokenVersion for invalidation support
+  const token = signToken({
+    id: user!.id,
+    organizationId: org.id,
+    tokenVersion: user!.tokenVersion,
+  });
+
+  return { user: principal, token };
 }
 
 export async function hashPassword(plain: string): Promise<string> {

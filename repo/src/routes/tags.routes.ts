@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate } from "../middleware/auth";
+import { authenticate, requireRole } from "../middleware/auth";
 import { tenantScope } from "../middleware/tenantScope";
 import { readRateLimiter, writeRateLimiter } from "../middleware/rateLimiter";
 import {
@@ -12,9 +12,11 @@ import {
 const router = Router();
 router.use(authenticate, tenantScope);
 
+const modOrAdmin = requireRole("MODERATOR", "ADMINISTRATOR");
+
 router.get("/tags", readRateLimiter, handleListTags);
-router.post("/tags", writeRateLimiter, handleCreateTag);
-router.patch("/tags/:tagId", writeRateLimiter, handleUpdateTag);
-router.delete("/tags/:tagId", writeRateLimiter, handleDeleteTag);
+router.post("/tags", writeRateLimiter, modOrAdmin, handleCreateTag);
+router.patch("/tags/:tagId", writeRateLimiter, modOrAdmin, handleUpdateTag);
+router.delete("/tags/:tagId", writeRateLimiter, modOrAdmin, handleDeleteTag);
 
 export default router;

@@ -87,17 +87,17 @@ export const analyticsService = {
     from: Date,
     to: Date
   ): Promise<DailyCount[]> {
-    // Use Prisma raw groupBy — PostgreSQL DATE() truncation
+    // Use Prisma raw groupBy — MySQL DATE() truncation
     const rows = await prisma.$queryRaw<{ day: Date; count: bigint }[]>`
       SELECT
-        DATE_TRUNC('day', "createdAt") AS day,
-        COUNT(*)::bigint               AS count
-      FROM "EventLog"
-      WHERE "organizationId" = ${organizationId}
-        AND "eventType"       = ${eventType}
-        AND "createdAt"      >= ${from}
-        AND "createdAt"      <= ${to}
-      GROUP BY DATE_TRUNC('day', "createdAt")
+        DATE(createdAt) AS day,
+        COUNT(*)        AS count
+      FROM EventLog
+      WHERE organizationId = ${organizationId}
+        AND eventType       = ${eventType}
+        AND createdAt      >= ${from}
+        AND createdAt      <= ${to}
+      GROUP BY DATE(createdAt)
       ORDER BY day ASC
     `;
 
@@ -117,16 +117,16 @@ export const analyticsService = {
   ): Promise<TopThread[]> {
     const rows = await prisma.$queryRaw<{ resourceId: string; count: bigint }[]>`
       SELECT
-        "resourceId",
-        COUNT(*)::bigint AS count
-      FROM "EventLog"
-      WHERE "organizationId" = ${organizationId}
-        AND "eventType"       = ${EVENT.THREAD_VIEW}
-        AND "resourceType"    = 'Thread'
-        AND "resourceId"     IS NOT NULL
-        AND "createdAt"      >= ${from}
-        AND "createdAt"      <= ${to}
-      GROUP BY "resourceId"
+        resourceId,
+        COUNT(*) AS count
+      FROM EventLog
+      WHERE organizationId = ${organizationId}
+        AND eventType       = ${EVENT.THREAD_VIEW}
+        AND resourceType    = 'Thread'
+        AND resourceId     IS NOT NULL
+        AND createdAt      >= ${from}
+        AND createdAt      <= ${to}
+      GROUP BY resourceId
       ORDER BY count DESC
       LIMIT ${limit}
     `;
@@ -145,12 +145,12 @@ export const analyticsService = {
     to: Date
   ): Promise<number> {
     const result = await prisma.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(DISTINCT "userId")::bigint AS count
-      FROM "EventLog"
-      WHERE "organizationId" = ${organizationId}
-        AND "userId"         IS NOT NULL
-        AND "createdAt"      >= ${from}
-        AND "createdAt"      <= ${to}
+      SELECT COUNT(DISTINCT userId) AS count
+      FROM EventLog
+      WHERE organizationId = ${organizationId}
+        AND userId         IS NOT NULL
+        AND createdAt      >= ${from}
+        AND createdAt      <= ${to}
     `;
     return Number(result[0]?.count ?? 0);
   },

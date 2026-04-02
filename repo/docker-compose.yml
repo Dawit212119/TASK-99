@@ -1,22 +1,22 @@
-version: "3.9"
-
 services:
   db:
-    image: postgres:16-alpine
+    image: mysql:8.0
     restart: unless-stopped
     environment:
-      POSTGRES_USER: civicforum
-      POSTGRES_PASSWORD: civicforum
-      POSTGRES_DB: civicforum
+      MYSQL_ROOT_PASSWORD: civicforum
+      MYSQL_USER: civicforum
+      MYSQL_PASSWORD: civicforum
+      MYSQL_DATABASE: civicforum
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
       - backup_volume:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U civicforum -d civicforum"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "civicforum", "-pcivicforum"]
       interval: 5s
       timeout: 5s
       retries: 12
-      start_period: 10s
+      start_period: 15s
 
   app:
     build:
@@ -29,7 +29,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://civicforum:civicforum@db:5432/civicforum
+      DATABASE_URL: mysql://civicforum:civicforum@db:3306/civicforum
       # All runtime config is self-contained in compose (no .env required).
       JWT_SECRET: local-dev-jwt-secret-change-in-production-32chars-VALID-KEY-0123456789
       JWT_EXPIRES_IN: 8h
@@ -51,5 +51,5 @@ services:
       - backup_volume:/backups
 
 volumes:
-  postgres_data:
+  mysql_data:
   backup_volume:

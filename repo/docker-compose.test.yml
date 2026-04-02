@@ -8,20 +8,22 @@
 
 services:
   db-test:
-    image: postgres:16-alpine
+    image: mysql:8.0
     environment:
-      POSTGRES_USER:     cftest
-      POSTGRES_PASSWORD: cftest
-      POSTGRES_DB:       cftest
+      MYSQL_ROOT_PASSWORD: cftest
+      MYSQL_USER:          cftest
+      MYSQL_PASSWORD:      cftest
+      MYSQL_DATABASE:      cftest
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     # tmpfs keeps the DB in RAM — fast teardown, no leftover volumes
     tmpfs:
-      - /var/lib/postgresql/data
+      - /var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cftest -d cftest"]
+      test: ["CMD", "mysql", "-h", "localhost", "-u", "cftest", "-pcftest", "-e", "SELECT 1"]
       interval: 3s
-      timeout: 3s
-      retries: 20
-      start_period: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
   app-test:
     build:
@@ -34,7 +36,7 @@ services:
     environment:
       NODE_ENV:                    test
       PORT:                        3000
-      DATABASE_URL:                postgresql://cftest:cftest@db-test:5432/cftest
+      DATABASE_URL:                mysql://cftest:cftest@db-test:3306/cftest
       JWT_SECRET:                  test-jwt-secret-exactly-32-charss
       JWT_EXPIRES_IN:              8h
       # Raised limits so tests never hit rate caps

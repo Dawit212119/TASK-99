@@ -25,7 +25,10 @@ export async function banUser(
 ): Promise<User> {
   const target = await resolveOrgUser(targetUserId, organizationId);
 
-  const updated = await userRepository.update(targetUserId, { isBanned: true });
+  const updated = await userRepository.update(targetUserId, {
+    isBanned: true,
+    tokenVersion: { increment: 1 },
+  });
 
   await auditRepository.create({
     organizationId,
@@ -49,7 +52,10 @@ export async function unbanUser(
 ): Promise<User> {
   await resolveOrgUser(targetUserId, organizationId);
 
-  const updated = await userRepository.update(targetUserId, { isBanned: false });
+  const updated = await userRepository.update(targetUserId, {
+    isBanned: false,
+    tokenVersion: { increment: 1 },
+  });
 
   await auditRepository.create({
     organizationId,
@@ -77,7 +83,10 @@ export async function muteUser(
   await resolveOrgUser(targetUserId, organizationId);
 
   const muteUntil = new Date(Date.now() + input.durationHours * 3_600_000);
-  const updated = await userRepository.update(targetUserId, { muteUntil });
+  const updated = await userRepository.update(targetUserId, {
+    muteUntil,
+    tokenVersion: { increment: 1 },
+  });
 
   await auditRepository.create({
     organizationId,
@@ -109,7 +118,10 @@ export async function unmuteUser(
 ): Promise<User> {
   await resolveOrgUser(targetUserId, organizationId);
 
-  const updated = await userRepository.update(targetUserId, { muteUntil: null });
+  const updated = await userRepository.update(targetUserId, {
+    muteUntil: null,
+    tokenVersion: { increment: 1 },
+  });
 
   await auditRepository.create({
     organizationId,
@@ -329,6 +341,7 @@ export async function changeUserRole(
 
   const updated = await userRepository.update(targetUserId, {
     role: newRole as User["role"],
+    tokenVersion: { increment: 1 },
   });
 
   // Permission change — always audit
